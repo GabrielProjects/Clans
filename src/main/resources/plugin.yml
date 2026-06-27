@@ -1,0 +1,50 @@
+name: Clans
+version: '${project.version}'
+main: dev.clans.ClansPlugin
+api-version: '1.21'
+description: Plugin per la gestione di clan con sistema di territori
+authors: [ClansDev]
+website: https://github.com/clans-dev/clans
+
+depend: []
+softdepend:
+  - WorldGuard
+  - PlaceholderAPI
+
+commands:
+  clan:
+    description: Comando principale per la gestione dei clan
+    usage: /clan <sottocomando>
+    aliases: [c, clans]
+
+permissions:
+  clans.admin:
+    description: Accesso amministrativo completo ai clan
+    default: op
+  clans.bypass.claim:
+    description: Bypassa le restrizioni sui claim
+    default: op
+  clans.use:
+    description: Permette l'uso dei comandi clan base
+    default: true
+  clans.create:
+    description: Permette di creare un clan
+    default: true
+  clans.invite:
+    description: Permette di invitare giocatori
+    default: true
+  clans.kick:
+    description: Permette di espellere membri
+    default: true
+  clans.promote:
+    description: Permette di promuovere membri
+    default: true
+  clans.demote:
+    description: Permette di retrocedere membri
+    default: true
+  clans.claim:
+    description: Permette di reclamare territori
+    default: true
+  clans.sethome:
+    description: Permette di impostare la home del clan
+    default: true
