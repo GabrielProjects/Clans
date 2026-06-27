@@ -17,12 +17,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public final class ClanCommand implements CommandExecutor, TabCompleter {
@@ -481,10 +481,15 @@ public final class ClanCommand implements CommandExecutor, TabCompleter {
     }
 
     private List<String> filterClanNames(String input) {
-        List<String> names = new ArrayList<>();
-        plugin.getClanRepository().findAll().thenAccept(clans -> names.addAll(
-                clans.stream().map(Clan::getName).collect(Collectors.toList())));
-        String lower = input.toLowerCase(Locale.ROOT);
-        return names.stream().filter(n -> n.toLowerCase(Locale.ROOT).startsWith(lower)).collect(Collectors.toList());
+        try {
+            List<Clan> clans = plugin.getClanRepository().findAll().get(250, TimeUnit.MILLISECONDS);
+            String lower = input.toLowerCase(Locale.ROOT);
+            return clans.stream()
+                    .map(Clan::getName)
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(lower))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 }
