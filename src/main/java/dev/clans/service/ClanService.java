@@ -92,7 +92,6 @@ public final class ClanService {
                             ClanMember member = memberRepository.findByPlayerSync(connection, player.getUniqueId()).orElseThrow();
                             cacheClan(clan);
                             cacheMember(member);
-                            worldGuardIntegration.syncClanMembers(clanId, List.of(player.getUniqueId()));
                             return CreateResult.SUCCESS;
                         } catch (Exception e) {
                             try {
@@ -113,24 +112,70 @@ public final class ClanService {
         });
     }
 
-    public CompletableFuture<Boolean> disbandClan(Player player) {
-        Optional<ClanMember> memberOpt = getCachedMember(player.getUniqueId());
-        if (memberOpt.isEmpty()) {
-            return CompletableFuture.completedFuture(false);
-        }
+    public enum DisbandResult {
+        SUCCESS,
+        NOT_IN_CLAN,
+        NOT_LEADER,
+        NOT_YOUR_CLAN,
+        CLAN_NOT_FOUND
+    }
 
-        ClanMember member = memberOpt.get();
+    public CompletableFuture<DisbandResult> disbandClan(Player player, String targetClan) {
+        return getMember(player.getUniqueId()).thenCompose(memberOpt -> {
+            if (memberOpt.isEmpty()) {
+                return CompletableFuture.completedFuture(DisbandResult.NOT_IN_CLAN);
+            }
+
+            ClanMember member = memberOpt.get();
+            if (targetClan != null && !targetClan.isBlank()) {
+                return resolveClanByNameOrTag(targetClan).thenCompose(clanOpt -> {
+                    if (clanOpt.isEmpty()) {
+                        return CompletableFuture.completedFuture(DisbandResult.CLAN_NOT_FOUND);
+                    }
+                    if (clanOpt.get().getId() != member.getClanId()) {
+                        return CompletableFuture.completedFuture(DisbandResult.NOT_YOUR_CLAN);
+                    }
+                    return disbandMemberClan(member);
+                });
+            }
+
+            if (member.getRole() != ClanRole.LEADER) {
+                return CompletableFuture.completedFuture(DisbandResult.NOT_LEADER);
+            }
+            return disbandMemberClan(member);
+        });
+    }
+
+    private CompletableFuture<Optional<Clan>> resolveClanByNameOrTag(String value) {
+        return clanRepository.findByName(value).thenCompose(nameResult -> {
+            if (nameResult.isPresent()) {
+                return CompletableFuture.completedFuture(nameResult);
+            }
+            return clanRepository.findByTag(value);
+        });
+    }
+
+    private CompletableFuture<DisbandResult> disbandMemberClan(ClanMember member) {
         if (member.getRole() != ClanRole.LEADER) {
-            return CompletableFuture.completedFuture(false);
+            return CompletableFuture.completedFuture(DisbandResult.NOT_LEADER);
         }
 
         long clanId = member.getClanId();
         return claimRepository.findByClan(clanId).thenCompose(claims -> {
             MessageUtil.runSync(() -> worldGuardIntegration.removeAllClaimRegions(clanId, claims));
             return clanRepository.delete(clanId).thenApply(v -> {
+                memberCache.entrySet().stream()
+                        .filter(e -> e.getValue().getClanId() == clanId)
+                        .map(e -> Bukkit.getPlayer(e.getKey()))
+                        .filter(java.util.Objects::nonNull)
+                        .forEach(online -> MessageUtil.runSync(() -> {
+                            if (plugin.getClanDisplayService() != null) {
+                                plugin.getClanDisplayService().clear(online);
+                            }
+                        }));
                 invalidateClanCache(clanId);
                 memberCache.entrySet().removeIf(e -> e.getValue().getClanId() == clanId);
-                return true;
+                return DisbandResult.SUCCESS;
             });
         });
     }
@@ -144,41 +189,43 @@ public final class ClanService {
     }
 
     private CompletableFuture<Boolean> modifyRole(Player actor, String targetName, ClanRole newRole, boolean promote) {
-        Optional<ClanMember> actorMember = getCachedMember(actor.getUniqueId());
-        if (actorMember.isEmpty() || actorMember.get().getRole() != ClanRole.LEADER) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-        if (!target.hasPlayedBefore() && !target.isOnline()) {
-            return CompletableFuture.completedFuture(false);
-        }
-
-        return memberRepository.findByPlayer(target.getUniqueId()).thenCompose(targetMemberOpt -> {
-            if (targetMemberOpt.isEmpty()) {
+        return getMember(actor.getUniqueId()).thenCompose(actorMemberOpt -> {
+            if (actorMemberOpt.isEmpty() || actorMemberOpt.get().getRole() != ClanRole.LEADER) {
                 return CompletableFuture.completedFuture(false);
             }
-            ClanMember targetMember = targetMemberOpt.get();
-            if (targetMember.getClanId() != actorMember.get().getClanId()) {
+            ClanMember actorMember = actorMemberOpt.get();
+
+            OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+            if (!target.hasPlayedBefore() && !target.isOnline()) {
                 return CompletableFuture.completedFuture(false);
             }
 
-            if (promote) {
-                if (targetMember.getRole() != ClanRole.MEMBER) {
+            return memberRepository.findByPlayer(target.getUniqueId()).thenCompose(targetMemberOpt -> {
+                if (targetMemberOpt.isEmpty()) {
                     return CompletableFuture.completedFuture(false);
                 }
-                return memberRepository.countOfficers(actorMember.get().getClanId()).thenCompose(count -> {
-                    if (count >= configManager.getMaxOfficers()) {
+                ClanMember targetMember = targetMemberOpt.get();
+                if (targetMember.getClanId() != actorMember.getClanId()) {
+                    return CompletableFuture.completedFuture(false);
+                }
+
+                if (promote) {
+                    if (targetMember.getRole() != ClanRole.MEMBER) {
+                        return CompletableFuture.completedFuture(false);
+                    }
+                    return memberRepository.countOfficers(actorMember.getClanId()).thenCompose(count -> {
+                        if (count >= configManager.getMaxOfficers()) {
+                            return CompletableFuture.completedFuture(false);
+                        }
+                        return applyRoleChange(targetMember, newRole);
+                    });
+                } else {
+                    if (targetMember.getRole() != ClanRole.OFFICER) {
                         return CompletableFuture.completedFuture(false);
                     }
                     return applyRoleChange(targetMember, newRole);
-                });
-            } else {
-                if (targetMember.getRole() != ClanRole.OFFICER) {
-                    return CompletableFuture.completedFuture(false);
                 }
-                return applyRoleChange(targetMember, newRole);
-            }
+            });
         });
     }
 
@@ -236,6 +283,10 @@ public final class ClanService {
 
     public void unloadPlayer(UUID playerUuid) {
         memberCache.remove(playerUuid);
+        Player player = Bukkit.getPlayer(playerUuid);
+        if (player != null && plugin.getClanDisplayService() != null) {
+            MessageUtil.runSync(() -> plugin.getClanDisplayService().clear(player));
+        }
     }
 
     public Optional<ClanMember> getCachedMember(UUID playerUuid) {
@@ -288,6 +339,10 @@ public final class ClanService {
 
     public void cacheMember(ClanMember member) {
         memberCache.put(member.getPlayerUuid(), member);
+        Player player = Bukkit.getPlayer(member.getPlayerUuid());
+        if (player != null && plugin.getClanDisplayService() != null) {
+            MessageUtil.runSync(() -> plugin.getClanDisplayService().update(player));
+        }
     }
 
     public void cacheClan(Clan clan) {

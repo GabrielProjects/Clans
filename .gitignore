@@ -1,5 +1,7 @@
 target/
 .tools/
+test-server/
+../MinecraftServer/
 .idea/
 *.iml
 .classpath

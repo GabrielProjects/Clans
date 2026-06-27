@@ -37,11 +37,27 @@ public final class DatabaseManager {
         config.setPassword(configManager.getDbPassword());
         config.setMaximumPoolSize(configManager.getDbPoolSize());
         config.setPoolName("ClansPool");
+        config.setDriverClassName(resolveMariaDbDriverClass());
         config.addDataSourceProperty("cachePrepStmts", "true");
         config.addDataSourceProperty("prepStmtCacheSize", "250");
 
         this.dataSource = new HikariDataSource(config);
         migrate();
+    }
+
+    private String resolveMariaDbDriverClass() throws SQLException {
+        String[] candidates = {
+                "dev.clans.lib.mariadb.Driver",
+                "org.mariadb.jdbc.Driver"
+        };
+        for (String driverClass : candidates) {
+            try {
+                Class.forName(driverClass);
+                return driverClass;
+            } catch (ClassNotFoundException ignored) {
+            }
+        }
+        throw new SQLException("Driver MariaDB JDBC non trovato nel JAR del plugin");
     }
 
     private void migrate() throws SQLException {

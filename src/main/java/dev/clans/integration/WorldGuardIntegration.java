@@ -5,6 +5,7 @@ import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.domains.DefaultDomain;
 import com.sk89q.worldguard.protection.flags.Flags;
+import com.sk89q.worldguard.protection.flags.RegionGroup;
 import com.sk89q.worldguard.protection.flags.StateFlag;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
@@ -14,6 +15,8 @@ import dev.clans.ClansPlugin;
 import dev.clans.config.ConfigManager;
 import dev.clans.database.repository.ClaimRepository;
 import dev.clans.model.ClanClaim;
+import dev.clans.model.ClanMember;
+import dev.clans.util.MessageUtil;
 import org.bukkit.Chunk;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -21,16 +24,19 @@ import org.bukkit.entity.Player;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 public final class WorldGuardIntegration {
 
     private final ClansPlugin plugin;
-    private final ClaimRepository claimRepository;
 
     public WorldGuardIntegration(ClansPlugin plugin) {
         this.plugin = plugin;
-        this.claimRepository = plugin.getClaimRepository();
+    }
+
+    private ClaimRepository claims() {
+        return plugin.getClaimRepository();
     }
 
     public String regionName(long clanId, int chunkX, int chunkZ) {
@@ -47,7 +53,14 @@ public final class WorldGuardIntegration {
 
         String regionId = regionName(clanId, chunk.getX(), chunk.getZ());
         if (manager.hasRegion(regionId)) {
-            syncMembersOnRegion(manager.getRegion(regionId), memberUuids);
+            ProtectedRegion existing = manager.getRegion(regionId);
+            syncMembersOnRegion(existing, memberUuids);
+            applyFlags(existing, config.getClaimFlags());
+            try {
+                manager.saveChanges();
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Errore aggiornamento regione WG: " + e.getMessage(), e);
+            }
             return true;
         }
 
@@ -60,6 +73,7 @@ public final class WorldGuardIntegration {
         BlockVector3 max = BlockVector3.at(maxX, config.getClaimMaxY(), maxZ);
 
         ProtectedCuboidRegion region = new ProtectedCuboidRegion(regionId, min, max);
+        region.setOwners(new DefaultDomain());
         applyFlags(region, config.getClaimFlags());
         syncMembersOnRegion(region, memberUuids);
 
@@ -99,7 +113,11 @@ public final class WorldGuardIntegration {
     }
 
     public void syncClanMembers(long clanId, List<UUID> memberUuids) {
-        List<ClanClaim> claims = claimRepository.findByClan(clanId).join();
+        claims().findByClan(clanId).thenAccept(claims ->
+                MessageUtil.runSync(() -> applyMemberSync(clanId, memberUuids, claims)));
+    }
+
+    private void applyMemberSync(long clanId, List<UUID> memberUuids, List<ClanClaim> claims) {
         for (ClanClaim claim : claims) {
             World world = plugin.getServer().getWorld(claim.getWorld());
             if (world == null) {
@@ -130,7 +148,7 @@ public final class WorldGuardIntegration {
     }
 
     private void updateMemberOnAllRegions(long clanId, UUID playerUuid, boolean add) {
-        claimRepository.findByClan(clanId).thenAccept(claims -> {
+        claims().findByClan(clanId).thenAccept(claims -> MessageUtil.runSync(() -> {
             for (ClanClaim claim : claims) {
                 World world = plugin.getServer().getWorld(claim.getWorld());
                 if (world == null) {
@@ -157,6 +175,31 @@ public final class WorldGuardIntegration {
                     plugin.getLogger().log(Level.WARNING, "Errore aggiornamento membro WG: " + e.getMessage(), e);
                 }
             }
+        }));
+    }
+
+    public void refreshAllClaimRegions() {
+        claims().findAll().thenAccept(claims -> {
+            if (claims.isEmpty()) {
+                return;
+            }
+            List<CompletableFuture<Void>> futures = new java.util.ArrayList<>();
+            for (ClanClaim claim : claims) {
+                futures.add(plugin.getMemberRepository().findByClan(claim.getClanId()).thenAccept(members ->
+                        MessageUtil.runSync(() -> {
+                            World world = plugin.getServer().getWorld(claim.getWorld());
+                            if (world == null) {
+                                return;
+                            }
+                            Chunk chunk = world.getChunkAt(claim.getChunkX(), claim.getChunkZ());
+                            List<UUID> memberUuids = members.stream()
+                                    .map(ClanMember::getPlayerUuid)
+                                    .toList();
+                            createClaimRegion(claim.getClanId(), chunk, memberUuids);
+                        })));
+            }
+            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
+                    .thenRun(() -> plugin.getLogger().info("Regioni claim sincronizzate con WorldGuard."));
         });
     }
 
@@ -174,11 +217,29 @@ public final class WorldGuardIntegration {
             if (flag == null) {
                 continue;
             }
-            StateFlag.State state = "allow".equalsIgnoreCase(entry.getValue())
-                    ? StateFlag.State.ALLOW
-                    : StateFlag.State.DENY;
-            region.setFlag(flag, state);
+            boolean allow = "allow".equalsIgnoreCase(entry.getValue());
+            if (isMemberProtectionFlag(entry.getKey())) {
+                if (allow) {
+                    region.setFlag(flag, StateFlag.State.ALLOW);
+                    region.setFlag(flag.getRegionGroupFlag(), RegionGroup.ALL);
+                } else {
+                    region.setFlag(flag, StateFlag.State.DENY);
+                    region.setFlag(flag.getRegionGroupFlag(), RegionGroup.NON_MEMBERS);
+                    region.setFlag(flag, StateFlag.State.ALLOW);
+                    region.setFlag(flag.getRegionGroupFlag(), RegionGroup.MEMBERS);
+                }
+                continue;
+            }
+            region.setFlag(flag, allow ? StateFlag.State.ALLOW : StateFlag.State.DENY);
+            region.setFlag(flag.getRegionGroupFlag(), RegionGroup.ALL);
         }
+    }
+
+    private boolean isMemberProtectionFlag(String name) {
+        return switch (name.toLowerCase()) {
+            case "build", "block-break", "block-place" -> true;
+            default -> false;
+        };
     }
 
     private StateFlag resolveFlag(String name) {

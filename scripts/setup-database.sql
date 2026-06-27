@@ -1,0 +1,4 @@
+CREATE DATABASE IF NOT EXISTS clans CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'clans'@'localhost' IDENTIFIED BY 'clans_test';
+GRANT ALL PRIVILEGES ON clans.* TO 'clans'@'localhost';
+FLUSH PRIVILEGES;

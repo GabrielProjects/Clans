@@ -42,6 +42,14 @@ public final class ClaimRepository {
         return Optional.empty();
     }
 
+    public Optional<ClanClaim> findByChunkNow(String world, int chunkX, int chunkZ) {
+        try (java.sql.Connection connection = databaseManager.getConnection()) {
+            return findByChunkSync(connection, world, chunkX, chunkZ);
+        } catch (java.sql.SQLException e) {
+            return Optional.empty();
+        }
+    }
+
     public CompletableFuture<List<ClanClaim>> findByClan(long clanId) {
         return databaseManager.supplyAsync(connection -> findByClanSync(connection, clanId));
     }
@@ -113,8 +121,48 @@ public final class ClaimRepository {
         }
     }
 
+    public CompletableFuture<List<ClanClaim>> findAll() {
+        return databaseManager.supplyAsync(connection -> {
+            List<ClanClaim> claims = new ArrayList<>();
+            try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM clan_claims");
+                 ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapClaim(rs));
+                }
+            }
+            return claims;
+        });
+    }
+
     public CompletableFuture<Void> deleteByClan(long clanId) {
         return databaseManager.runAsync(connection -> deleteByClanSync(connection, clanId));
+    }
+
+    public CompletableFuture<List<ClanClaim>> findInArea(String world, int minChunkX, int maxChunkX, int minChunkZ, int maxChunkZ) {
+        return databaseManager.supplyAsync(connection ->
+                findInAreaSync(connection, world, minChunkX, maxChunkX, minChunkZ, maxChunkZ));
+    }
+
+    public List<ClanClaim> findInAreaSync(Connection connection, String world,
+                                            int minChunkX, int maxChunkX, int minChunkZ, int maxChunkZ) throws SQLException {
+        List<ClanClaim> claims = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT cc.* FROM clan_claims cc
+                INNER JOIN clans c ON c.id = cc.clan_id
+                WHERE cc.world = ? AND cc.chunk_x BETWEEN ? AND ? AND cc.chunk_z BETWEEN ? AND ?
+                """)) {
+            statement.setString(1, world);
+            statement.setInt(2, minChunkX);
+            statement.setInt(3, maxChunkX);
+            statement.setInt(4, minChunkZ);
+            statement.setInt(5, maxChunkZ);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapClaim(rs));
+                }
+            }
+        }
+        return claims;
     }
 
     public void deleteByClanSync(Connection connection, long clanId) throws SQLException {

@@ -1,5 +1,5 @@
 name: Clans
-version: '${project.version}'
+version: '1.0.0'
 main: dev.clans.ClansPlugin
 api-version: '1.21'
 description: Plugin per la gestione di clan con sistema di territori
@@ -18,15 +18,15 @@ commands:
     aliases: [c, clans]
 
 permissions:
+  clans.use:
+    description: Permette l'uso dei comandi clan
+    default: true
   clans.admin:
     description: Accesso amministrativo completo ai clan
     default: op
   clans.bypass.claim:
     description: Bypassa le restrizioni sui claim
     default: op
-  clans.use:
-    description: Permette l'uso dei comandi clan base
-    default: true
   clans.create:
     description: Permette di creare un clan
     default: true

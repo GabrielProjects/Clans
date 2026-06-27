@@ -129,7 +129,23 @@ public final class ConfigManager {
     }
 
     public String getChatFormat() {
-        return config().getString("chat.format", "&8[&6{tag}&8] &7{player}&8: &f{message}");
+        return config().getString("chat.format", "&7[ClanChat] &8[&6{tag}&8] &7<{player}>&8: &f{message}");
+    }
+
+    public boolean isDisplayEnabled() {
+        return config().getBoolean("display.enabled", true);
+    }
+
+    public boolean isClaimZoneNotificationsEnabled() {
+        return config().getBoolean("display.claim-zone-notifications", true);
+    }
+
+    public String getTabFormat() {
+        return config().getString("display.tab-format", "&8[&6{tag}&8] &f{player}");
+    }
+
+    public String getGlobalChatFormat() {
+        return config().getString("display.global-chat-format", "&8[&6{tag}&8] &7{player}&8: &f{message}");
     }
 
     public String getPlaceholderNoClan() {
@@ -138,5 +154,45 @@ public final class ConfigManager {
 
     public String getPlaceholderNoTag() {
         return config().getString("placeholders.no-tag", "");
+    }
+
+    public int getMapSize() {
+        return config().getInt("map.size", 5);
+    }
+
+    public String getMapUnclaimedChar() {
+        return config().getString("map.unclaimed-char", "/");
+    }
+
+    public String getMapUnclaimedColor() {
+        return config().getString("map.unclaimed-color", "&7");
+    }
+
+    public String getMapOwnClanChar() {
+        return config().getString("map.own-clan-char", "#");
+    }
+
+    public String getMapOwnClanColor() {
+        return config().getString("map.own-clan-color", "&a");
+    }
+
+    public String getMapPlayerChar() {
+        return config().getString("map.player-char", "+");
+    }
+
+    public String getMapPlayerColor() {
+        return config().getString("map.player-color", "&f");
+    }
+
+    public List<String> getMapEnemyChars() {
+        return config().getStringList("map.enemy-chars");
+    }
+
+    public List<String> getMapEnemyColors() {
+        return config().getStringList("map.enemy-colors");
+    }
+
+    public int getMapRadius() {
+        return getMapSize() / 2;
     }
 }

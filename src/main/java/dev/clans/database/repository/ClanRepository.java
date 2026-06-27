@@ -39,6 +39,14 @@ public final class ClanRepository {
         return Optional.empty();
     }
 
+    public Optional<Clan> findByIdNow(long id) {
+        try (java.sql.Connection connection = databaseManager.getConnection()) {
+            return findByIdSync(connection, id);
+        } catch (java.sql.SQLException e) {
+            return Optional.empty();
+        }
+    }
+
     public CompletableFuture<Optional<Clan>> findByName(String name) {
         return databaseManager.supplyAsync(connection -> findByNameSync(connection, name));
     }

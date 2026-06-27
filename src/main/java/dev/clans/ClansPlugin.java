@@ -10,9 +10,13 @@ import dev.clans.database.repository.InviteRepository;
 import dev.clans.database.repository.MemberRepository;
 import dev.clans.integration.ClansPlaceholderExpansion;
 import dev.clans.integration.WorldGuardIntegration;
+import dev.clans.listener.ClaimZoneListener;
+import dev.clans.listener.PlayerChatListener;
 import dev.clans.listener.PlayerJoinListener;
 import dev.clans.listener.PlayerQuitListener;
+import dev.clans.service.ClaimMapService;
 import dev.clans.service.ClaimService;
+import dev.clans.service.ClanDisplayService;
 import dev.clans.service.ClanService;
 import dev.clans.service.HomeService;
 import dev.clans.service.InviteService;
@@ -36,8 +40,10 @@ public final class ClansPlugin extends JavaPlugin {
 
     private PermissionService permissionService;
     private ClanService clanService;
+    private ClanDisplayService clanDisplayService;
     private InviteService inviteService;
     private ClaimService claimService;
+    private ClaimMapService claimMapService;
     private HomeService homeService;
 
     @Override
@@ -65,6 +71,8 @@ public final class ClansPlugin extends JavaPlugin {
         registerCommands();
         registerListeners();
         registerPlaceholderApi();
+        clanDisplayService.refreshOnlinePlayers();
+        Bukkit.getScheduler().runTask(this, worldGuardIntegration::refreshAllClaimRegions);
 
         getLogger().info("Clans abilitato con successo.");
     }
@@ -106,8 +114,10 @@ public final class ClansPlugin extends JavaPlugin {
     private void initServices() {
         this.permissionService = new PermissionService(configManager);
         this.clanService = new ClanService(this, clanRepository, memberRepository, claimRepository, worldGuardIntegration);
+        this.clanDisplayService = new ClanDisplayService(this, clanService);
         this.inviteService = new InviteService(this, inviteRepository, memberRepository, clanRepository, permissionService, worldGuardIntegration);
         this.claimService = new ClaimService(this, claimRepository, clanRepository, memberRepository, worldGuardIntegration, configManager, permissionService);
+        this.claimMapService = new ClaimMapService(this, claimRepository, memberRepository, clanRepository);
         this.homeService = new HomeService(this, clanRepository, claimRepository, configManager, permissionService);
     }
 
@@ -119,6 +129,8 @@ public final class ClansPlugin extends JavaPlugin {
 
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerChatListener(this, clanDisplayService), this);
+        Bukkit.getPluginManager().registerEvents(new ClaimZoneListener(this), this);
         Bukkit.getPluginManager().registerEvents(new PlayerQuitListener(inviteService, homeService), this);
     }
 
@@ -145,12 +157,20 @@ public final class ClansPlugin extends JavaPlugin {
         return clanService;
     }
 
+    public ClanDisplayService getClanDisplayService() {
+        return clanDisplayService;
+    }
+
     public InviteService getInviteService() {
         return inviteService;
     }
 
     public ClaimService getClaimService() {
         return claimService;
+    }
+
+    public ClaimMapService getClaimMapService() {
+        return claimMapService;
     }
 
     public HomeService getHomeService() {

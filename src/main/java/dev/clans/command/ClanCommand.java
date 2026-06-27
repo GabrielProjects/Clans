@@ -29,7 +29,7 @@ public final class ClanCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of(
             "create", "disband", "invite", "accept", "deny", "kick", "promote", "demote",
-            "chat", "claim", "unclaim", "home", "sethome", "info", "help"
+            "chat", "claim", "unclaim", "map", "home", "sethome", "info", "help"
     );
 
     private final ClansPlugin plugin;
@@ -48,7 +48,7 @@ public final class ClanCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase(Locale.ROOT);
         return switch (sub) {
             case "create" -> handleCreate(sender, args);
-            case "disband" -> handleDisband(sender);
+            case "disband" -> handleDisband(sender, args);
             case "invite" -> handleInvite(sender, args);
             case "accept" -> handleAccept(sender);
             case "deny" -> handleDeny(sender);
@@ -58,6 +58,7 @@ public final class ClanCommand implements CommandExecutor, TabCompleter {
             case "chat", "c" -> handleChat(sender, args);
             case "claim" -> handleClaim(sender);
             case "unclaim" -> handleUnclaim(sender);
+            case "map" -> handleMap(sender);
             case "home" -> handleHome(sender);
             case "sethome" -> handleSetHome(sender);
             case "info" -> handleInfo(sender, args);
@@ -92,25 +93,33 @@ public final class ClanCommand implements CommandExecutor, TabCompleter {
             switch (result) {
                 case SUCCESS -> plugin.getMessages().send(player, "clan.create-success", Map.of("name", name, "tag", tag));
                 case ALREADY_IN_CLAN -> plugin.getMessages().send(player, "clan.already-in-clan");
-                case NAME_INVALID, TAG_INVALID -> plugin.getMessages().send(player, result == ClanService.CreateResult.NAME_INVALID ? "clan.name-invalid" : "clan.tag-invalid");
+                case NAME_INVALID -> plugin.getMessages().send(player, "clan.name-invalid");
+                case TAG_INVALID -> plugin.getMessages().send(player, "clan.tag-invalid");
                 case NAME_TAKEN -> plugin.getMessages().send(player, "clan.name-taken");
                 case TAG_TAKEN -> plugin.getMessages().send(player, "clan.tag-taken");
-                default -> plugin.getMessages().send(player, "clan.create-failed");
+                case FAILED -> plugin.getMessages().send(player, "clan.create-failed");
             }
-        }));
+        })).exceptionally(ex -> {
+            MessageUtil.runSync(() -> plugin.getMessages().send(player, "clan.create-failed"));
+            plugin.getLogger().severe("Errore async creazione clan: " + ex.getMessage());
+            return null;
+        });
         return true;
     }
 
-    private boolean handleDisband(CommandSender sender) {
+    private boolean handleDisband(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
             plugin.getMessages().send(sender, "general.player-only");
             return true;
         }
-        plugin.getClanService().disbandClan(player).thenAccept(success -> MessageUtil.runSync(() -> {
-            if (success) {
-                plugin.getMessages().send(player, "clan.disband-success");
-            } else {
-                plugin.getMessages().send(player, "clan.disband-not-leader");
+        String targetClan = args.length >= 2 ? args[1] : null;
+        plugin.getClanService().disbandClan(player, targetClan).thenAccept(result -> MessageUtil.runSync(() -> {
+            switch (result) {
+                case SUCCESS -> plugin.getMessages().send(player, "clan.disband-success");
+                case NOT_IN_CLAN -> plugin.getMessages().send(player, "clan.not-in-clan");
+                case NOT_LEADER -> plugin.getMessages().send(player, "clan.disband-not-leader");
+                case NOT_YOUR_CLAN -> plugin.getMessages().send(player, "clan.disband-not-your-clan");
+                case CLAN_NOT_FOUND -> plugin.getMessages().send(player, "clan.not-found");
             }
         }));
         return true;
@@ -328,6 +337,15 @@ public final class ClanCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean handleMap(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            plugin.getMessages().send(sender, "general.player-only");
+            return true;
+        }
+        plugin.getClaimMapService().showMap(player);
+        return true;
+    }
+
     private boolean handleHome(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             plugin.getMessages().send(sender, "general.player-only");
@@ -431,6 +449,7 @@ public final class ClanCommand implements CommandExecutor, TabCompleter {
                 "promote/demote <player> - Gestisci ruoli",
                 "chat <msg> - Chat clan",
                 "claim/unclaim - Gestisci territori",
+                "map - Mappa claim vicini",
                 "sethome/home - Home del clan",
                 "info [clan] - Informazioni clan"
         );

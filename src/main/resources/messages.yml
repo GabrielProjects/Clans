@@ -24,6 +24,7 @@ clan:
   tag-taken: "{prefix}&cTag clan gia in uso."
   disband-success: "{prefix}&aClan sciolto con successo."
   disband-not-leader: "{prefix}&cSolo il leader puo sciogliere il clan."
+  disband-not-your-clan: "{prefix}&cPuoi sciogliere solo il tuo clan."
   info-header: "{prefix}&6=== {name} [{tag}] ==="
   info-leader: "&7Leader: &e{leader}"
   info-members: "&7Membri: &e{count}/{max}"
@@ -82,6 +83,9 @@ claim:
   world-not-allowed: "{prefix}&cNon puoi reclamare in questo mondo."
   no-permission: "{prefix}&cNon hai il permesso per gestire i territori."
   not-in-claim: "{prefix}&cDevi essere in un territorio del clan."
+  zone-enter: "&7Entrando nella zona di &6{clan}"
+  zone-exit: "&7Uscendo dalla zona di &6{clan}"
+  zone-transition: "&7Uscendo dalla zona di &6{from} &7ed entrando nella zona di &6{to}"
 
 home:
   set-success: "{prefix}&aHome del clan impostata."
@@ -92,3 +96,14 @@ home:
   warmup-cancelled: "{prefix}&cTeletrasporto annullato."
   must-be-in-claim: "{prefix}&cPuoi impostare la home solo in un territorio del clan."
   no-permission: "{prefix}&cNon hai il permesso per impostare la home."
+
+map:
+  separator: "&7---------"
+  title: "&6Clan maps:"
+  direction-north: "&7{spacing}N"
+  direction-south: "&7{spacing}S"
+  direction-west: "&7W"
+  direction-east: "&7E"
+  legend-unclaimed: "&7/ &7Libero"
+  legend-own: "&a# &7{clan}"
+  legend-clan: "{color}{symbol} &7{clan}"
