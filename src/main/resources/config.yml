@@ -1,0 +1,51 @@
+# Clans - Configurazione principale
+
+database:
+  host: localhost
+  port: 3306
+  database: clans
+  username: clans
+  password: ""
+  pool-size: 10
+
+claims:
+  max-per-clan: 10
+  min-y: -64
+  max-y: 320
+  allowed-worlds: []
+  flags:
+    build: deny
+    block-break: deny
+    block-place: deny
+    pvp: deny
+    mob-spawning: deny
+
+home:
+  cooldown-seconds: 60
+  warmup-seconds: 3
+
+invites:
+  expire-minutes: 5
+
+kick:
+  confirm-timeout-seconds: 30
+
+limits:
+  max-officers: 3
+  name-min-length: 3
+  name-max-length: 32
+  tag-min-length: 2
+  tag-max-length: 8
+  name-pattern: "^[a-zA-Z0-9_]+$"
+  tag-pattern: "^[a-zA-Z0-9]+$"
+  max-members: 50
+
+chat:
+  format: "&8[&6{tag}&8] &7{player}&8: &f{message}"
+
+placeholders:
+  no-clan: "Nessuno"
+  no-tag: ""
+
+messages:
+  prefix: "&8[&6Clans&8] "

@@ -1,0 +1,94 @@
+prefix: "&8[&6Clans&8] "
+
+general:
+  no-permission: "{prefix}&cNon hai il permesso per eseguire questa azione."
+  player-only: "{prefix}&cQuesto comando puo essere usato solo da un giocatore."
+  player-not-found: "{prefix}&cGiocatore non trovato."
+  unknown-command: "{prefix}&cSottocomando sconosciuto. Usa &e/clan help"
+  usage: "{prefix}&7Uso: &e{usage}"
+
+help:
+  header: "{prefix}&6=== Comandi Clan ==="
+  line: "&e/clan {command} &7- {description}"
+  footer: ""
+
+clan:
+  already-in-clan: "{prefix}&cSei gia in un clan."
+  not-in-clan: "{prefix}&cNon sei in un clan."
+  not-found: "{prefix}&cClan non trovato."
+  create-success: "{prefix}&aClan &e{name} &a[{tag}] &acreato con successo!"
+  create-failed: "{prefix}&cImpossibile creare il clan."
+  name-invalid: "{prefix}&cNome clan non valido."
+  tag-invalid: "{prefix}&cTag clan non valido."
+  name-taken: "{prefix}&cNome clan gia in uso."
+  tag-taken: "{prefix}&cTag clan gia in uso."
+  disband-success: "{prefix}&aClan sciolto con successo."
+  disband-not-leader: "{prefix}&cSolo il leader puo sciogliere il clan."
+  info-header: "{prefix}&6=== {name} [{tag}] ==="
+  info-leader: "&7Leader: &e{leader}"
+  info-members: "&7Membri: &e{count}/{max}"
+  info-claims: "&7Territori: &e{claims}/{max}"
+  info-home: "&7Home: &e{status}"
+  info-member-line: "&7- &e{player} &8({role})"
+  home-set: "&aImpostata"
+  home-not-set: "&cNon impostata"
+
+roles:
+  leader: "Leader"
+  officer: "Officer"
+  member: "Membro"
+
+invite:
+  sent: "{prefix}&aInvito inviato a &e{player}&a."
+  received: "{prefix}&e{inviter} &ati ha invitato nel clan &6{clan}&a. Usa &e/clan accept &ao &e/clan deny"
+  already-invited: "{prefix}&cQuesto giocatore ha gia un invito pendente."
+  target-in-clan: "{prefix}&cQuesto giocatore e gia in un clan."
+  no-pending: "{prefix}&cNon hai inviti pendenti."
+  accepted: "{prefix}&aHai accettato l'invito nel clan &e{clan}&a."
+  denied: "{prefix}&cHai rifiutato l'invito nel clan &e{clan}&c."
+  expired: "{prefix}&cL'invito e scaduto."
+  cannot-invite: "{prefix}&cNon puoi invitare giocatori."
+
+kick:
+  success: "{prefix}&aHai espulso &e{player} &adal clan."
+  kicked: "{prefix}&cSei stato espulso dal clan."
+  cannot-kick: "{prefix}&cNon puoi espellere questo giocatore."
+  confirm-pending: "{prefix}&eEspelli &c{player}&e? Ripeti &c/clan kick {player} confirm &eper confermare."
+  confirm-expired: "{prefix}&cConferma espulsione scaduta. Ripeti il comando."
+  not-member: "{prefix}&cQuesto giocatore non e nel tuo clan."
+  cannot-kick-leader: "{prefix}&cNon puoi espellere il leader."
+
+promote:
+  success: "{prefix}&aHai promosso &e{player} &aa &6Officer&a."
+  promoted: "{prefix}&aSei stato promosso a &6Officer&a!"
+  cannot-promote: "{prefix}&cNon puoi promuovere questo giocatore."
+  max-officers: "{prefix}&cNumero massimo di officer raggiunto."
+
+demote:
+  success: "{prefix}&aHai retrocesso &e{player} &aa &7Membro&a."
+  demoted: "{prefix}&cSei stato retrocesso a &7Membro&c."
+  cannot-demote: "{prefix}&cNon puoi retrocedere questo giocatore."
+
+chat:
+  usage: "{prefix}&7Uso: &e/clan chat <messaggio>"
+  empty: "{prefix}&cIl messaggio non puo essere vuoto."
+
+claim:
+  success: "{prefix}&aChunk reclamato con successo! &7({x}, {z})"
+  unclaim-success: "{prefix}&aChunk liberato con successo! &7({x}, {z})"
+  already-claimed: "{prefix}&cQuesto chunk e gia reclamato."
+  not-claimed: "{prefix}&cQuesto chunk non appartiene al tuo clan."
+  limit-reached: "{prefix}&cLimite territori raggiunto (&e{max}&c)."
+  world-not-allowed: "{prefix}&cNon puoi reclamare in questo mondo."
+  no-permission: "{prefix}&cNon hai il permesso per gestire i territori."
+  not-in-claim: "{prefix}&cDevi essere in un territorio del clan."
+
+home:
+  set-success: "{prefix}&aHome del clan impostata."
+  teleport-success: "{prefix}&aTeletrasportato alla home del clan."
+  not-set: "{prefix}&cLa home del clan non e stata impostata."
+  cooldown: "{prefix}&cDevi attendere &e{seconds}s &cprima di usare di nuovo /clan home."
+  warmup: "{prefix}&eTeletrasporto tra &6{seconds}s&e... Non muoverti!"
+  warmup-cancelled: "{prefix}&cTeletrasporto annullato."
+  must-be-in-claim: "{prefix}&cPuoi impostare la home solo in un territorio del clan."
+  no-permission: "{prefix}&cNon hai il permesso per impostare la home."
