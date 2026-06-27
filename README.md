@@ -2,6 +2,8 @@
 
 Plugin Paper 1.21 per la gestione di clan con sistema di territori, persistenza MariaDB e integrazione WorldGuard.
 
+Repository: https://github.com/GabrielProjects/Clans
+
 ## Requisiti
 
 - **Paper** 1.21.x

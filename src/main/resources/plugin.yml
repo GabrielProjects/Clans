@@ -4,7 +4,7 @@ main: dev.clans.ClansPlugin
 api-version: '1.21'
 description: Plugin per la gestione di clan con sistema di territori
 authors: [ClansDev]
-website: https://github.com/clans-dev/clans
+website: https://github.com/GabrielProjects/Clans
 
 depend: []
 softdepend:
